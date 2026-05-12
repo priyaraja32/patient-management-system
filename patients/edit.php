@@ -140,7 +140,7 @@ include("../includes/header.php");
 
 </h2>
 
-// ERROR MESSAGE
+
 
 <?php if($error != ""){ ?>
 
@@ -153,7 +153,7 @@ include("../includes/header.php");
 <?php } ?>
 >
 
-// SUCCESS MESSAGE
+
 <?php if($success != ""){ ?>
 
 <div class="alert alert-success">
