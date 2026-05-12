@@ -2,11 +2,7 @@
 
 include("../config/db.php");
 
-//get id
-
 $id = $_GET['id'] ?? '';
-
-// check if id is empty
 
 if(empty($id)){
 
@@ -14,8 +10,6 @@ if(empty($id)){
     exit;
 
 }
-
-//fetch data
 
 $stmt = $conn->prepare(
 "SELECT * FROM patients WHERE id=?"
@@ -29,7 +23,7 @@ $result = $stmt->get_result();
 
 $row = $result->fetch_assoc();
 
-// if no record found
+
 
 if(!$row){
 
@@ -38,12 +32,8 @@ if(!$row){
 
 }
 
-// initialize error and success messages
-
 $error = "";
 $success = "";
-
-// handle form submission
 
 if(isset($_POST['update'])){
 
@@ -57,7 +47,7 @@ if(isset($_POST['update'])){
 
     $diagnosis = trim($_POST['diagnosis'] ?? '');
 
- // validate input
+
 
     if(empty($name) || empty($phone)
     || empty($age) || empty($gender)
@@ -75,7 +65,7 @@ if(isset($_POST['update'])){
 
     else{
 
-       // update record using prepared statement
+       
 
         $update = $conn->prepare(
 
@@ -104,13 +94,13 @@ if(isset($_POST['update'])){
 
         );
 
-   // execute update statement
+   
 
         if($update->execute()){
 
             $success = "Patient Updated Successfully";
 
-            // fetch updated data
+            
 
             $stmt = $conn->prepare(
             "SELECT * FROM patients WHERE id=?"

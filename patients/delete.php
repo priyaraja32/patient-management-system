@@ -2,11 +2,19 @@
 
 include("../config/db.php");
 
-$id = $_GET['id'];
+$id = $_GET['id'] ?? '';
 
-mysqli_query($conn,
-"DELETE FROM patients WHERE id='$id'");
+if(!empty($id)){
+
+    $stmt = $conn->prepare(
+    "DELETE FROM patients WHERE id=?");
+
+    $stmt->bind_param("i", $id);
+
+    $stmt->execute();
+}
 
 header("Location:list.php");
+exit;
 
 ?>

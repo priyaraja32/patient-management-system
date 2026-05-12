@@ -3,7 +3,7 @@
 include("../config/db.php");
 include("../includes/header.php");
 
-$search = $_GET['search'] ?? '';
+$search = trim($_GET['search'] ?? '');
 $sort = $_GET['sort'] ?? '';
 
 $page = $_GET['page'] ?? 1;
@@ -11,7 +11,7 @@ $page = $_GET['page'] ?? 1;
 $limit = 5;
 $offset = ($page - 1) * $limit;
 
-$order = "ORDER BY patients.id DESC";
+$order = "ORDER BY patients.id ASC";
 
 if($sort == "age_asc"){
     $order = "ORDER BY age ASC";
@@ -30,21 +30,42 @@ elseif($sort == "name_desc"){
 }
 
 $where = "";
+$params = [];
+$types = "";
 
 if($search != ""){
 
-    $where = "WHERE patient_name LIKE '%$search%'
-    OR diagnosis LIKE '%$search%'";
+    $where = "WHERE patient_name LIKE ?
+    OR diagnosis LIKE ?";
+
+    $searchValue = "%$search%";
+
+    $params[] = $searchValue;
+    $params[] = $searchValue;
+
+    $types .= "ss";
 }
 
-$totalQuery = mysqli_query($conn,
-"SELECT COUNT(*) as total FROM patients $where");
+$totalSql = "SELECT COUNT(*) as total
+FROM patients
+$where";
 
-$totalRow = mysqli_fetch_assoc($totalQuery);
+$totalStmt = $conn->prepare($totalSql);
+
+if(!empty($params)){
+    $totalStmt->bind_param($types, ...$params);
+}
+
+$totalStmt->execute();
+
+$totalResult = $totalStmt->get_result();
+
+$totalRow = mysqli_fetch_assoc($totalResult);
 
 $totalRecords = $totalRow['total'];
 
 $totalPages = ceil($totalRecords / $limit);
+
 
 $query = "SELECT patients.*,
 doctors.doctor_name
@@ -58,9 +79,22 @@ $where
 
 $order
 
-LIMIT $offset,$limit";
+LIMIT ?, ?";
 
-$result = mysqli_query($conn,$query);
+$stmt = $conn->prepare($query);
+
+
+$mainParams = $params;
+$mainTypes = $types . "ii";
+
+$mainParams[] = $offset;
+$mainParams[] = $limit;
+
+$stmt->bind_param($mainTypes, ...$mainParams);
+
+$stmt->execute();
+
+$result = $stmt->get_result();
 
 ?>
 
@@ -99,7 +133,7 @@ $result = mysqli_query($conn,$query);
 name="search"
 class="form-control"
 placeholder="Search by patient name or diagnosis"
-value="<?php echo $search; ?>">
+value="<?php echo htmlspecialchars($search); ?>">
 
 </div>
 
@@ -109,11 +143,33 @@ value="<?php echo $search; ?>">
 
 <option value="">Sort By</option>
 
-<option value="age_asc">Age ASC</option>
-<option value="age_desc">Age DESC</option>
+<option value="age_asc"
+<?php if($sort=="age_asc") echo "selected"; ?>>
 
-<option value="name_asc">Name A-Z</option>
-<option value="name_desc">Name Z-A</option>
+Age ASC
+
+</option>
+
+<option value="age_desc"
+<?php if($sort=="age_desc") echo "selected"; ?>>
+
+Age DESC
+
+</option>
+
+<option value="name_asc"
+<?php if($sort=="name_asc") echo "selected"; ?>>
+
+Name A-Z
+
+</option>
+
+<option value="name_desc"
+<?php if($sort=="name_desc") echo "selected"; ?>>
+
+Name Z-A
+
+</option>
 
 </select>
 
@@ -168,21 +224,21 @@ value="<?php echo $search; ?>">
 <td>
 
 <div class="fw-bold">
-    <?php echo $row['patient_name']; ?>
+    <?php echo htmlspecialchars($row['patient_name']); ?>
 </div>
 
 <div class="text-muted small">
-    <?php echo $row['email']; ?>
+    <?php echo htmlspecialchars($row['email']); ?>
 </div>
 
 </td>
 
 <td>
-    <?php echo $row['phone']; ?>
+    <?php echo htmlspecialchars($row['phone']); ?>
 </td>
 
 <td>
-    <?php echo $row['age']; ?>
+    <?php echo htmlspecialchars($row['age']); ?>
 </td>
 
 <td>
@@ -204,11 +260,11 @@ value="<?php echo $search; ?>">
 </td>
 
 <td>
-    <?php echo $row['diagnosis']; ?>
+    <?php echo htmlspecialchars($row['diagnosis']); ?>
 </td>
 
 <td>
-    <?php echo $row['doctor_name']; ?>
+    <?php echo htmlspecialchars($row['doctor_name'] ?? 'Not Assigned'); ?>
 </td>
 
 <td>
@@ -249,7 +305,7 @@ onclick="return confirm('Delete Patient?')">
 <li class="page-item">
 
 <a class="page-link"
-href="?page=<?php echo $page-1; ?>">
+href="?page=<?php echo $page-1; ?>&search=<?php echo urlencode($search); ?>&sort=<?php echo $sort; ?>">
 
 Previous
 
@@ -264,7 +320,7 @@ Previous
 <li class="page-item">
 
 <a class="page-link"
-href="?page=<?php echo $page+1; ?>">
+href="?page=<?php echo $page+1; ?>&search=<?php echo urlencode($search); ?>&sort=<?php echo $sort; ?>">
 
 Next
 

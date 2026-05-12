@@ -36,10 +36,17 @@ $doctor_id = trim($_POST['doctor_id'] ?? '');
 
     else{
 
-        $check = mysqli_query($conn,
-        "SELECT * FROM patients WHERE email='$email'");
 
-        if(mysqli_num_rows($check) > 0){
+        $check = $conn->prepare(
+        "SELECT id FROM patients WHERE email=?");
+
+        $check->bind_param("s", $email);
+
+        $check->execute();
+
+        $result = $check->get_result();
+
+        if($result->num_rows > 0){
 
             $error = "Email already exists";
 
@@ -47,15 +54,28 @@ $doctor_id = trim($_POST['doctor_id'] ?? '');
 
         else{
 
-            $sql = "INSERT INTO patients
+            // INSERT USING BIND PARAMS
+
+            $stmt = $conn->prepare(
+            "INSERT INTO patients
             (patient_name,email,phone,age,gender,diagnosis,doctor_id)
 
             VALUES
 
-            ('$name','$email','$phone','$age',
-            '$gender','$diagnosis','$doctor_id')";
+            (?,?,?,?,?,?,?)");
 
-            if(mysqli_query($conn,$sql)){
+            $stmt->bind_param(
+            "sssissi",
+            $name,
+            $email,
+            $phone,
+            $age,
+            $gender,
+            $diagnosis,
+            $doctor_id
+            );
+
+            if($stmt->execute()){
 
                 $success = "Patient Added Successfully";
 
@@ -118,7 +138,8 @@ include("../includes/header.php");
 
 <input type="text"
 name="patient_name"
-class="form-control">
+class="form-control"
+value="<?php echo htmlspecialchars($name ?? ''); ?>">
 
 </div>
 
@@ -128,7 +149,8 @@ class="form-control">
 
 <input type="email"
 name="email"
-class="form-control">
+class="form-control"
+value="<?php echo htmlspecialchars($email ?? ''); ?>">
 
 </div>
 
@@ -138,7 +160,8 @@ class="form-control">
 
 <input type="text"
 name="phone"
-class="form-control">
+class="form-control"
+value="<?php echo htmlspecialchars($phone ?? ''); ?>">
 
 </div>
 
@@ -148,7 +171,8 @@ class="form-control">
 
 <input type="number"
 name="age"
-class="form-control">
+class="form-control"
+value="<?php echo htmlspecialchars($age ?? ''); ?>">
 
 </div>
 
@@ -159,8 +183,16 @@ class="form-control">
 <select name="gender" class="form-select">
 
 <option value="">Select Gender</option>
-<option value="Male">Male</option>
-<option value="Female">Female</option>
+
+<option value="Male"
+<?php if(($gender ?? '') == "Male") echo "selected"; ?>>
+Male
+</option>
+
+<option value="Female"
+<?php if(($gender ?? '') == "Female") echo "selected"; ?>>
+Female
+</option>
 
 </select>
 
@@ -183,7 +215,15 @@ while($doctor = mysqli_fetch_assoc($doctorQuery)){
 
 ?>
 
-<option value="<?php echo $doctor['id']; ?>">
+<option value="<?php echo $doctor['id']; ?>"
+
+<?php
+if(($doctor_id ?? '') == $doctor['id']){
+    echo "selected";
+}
+?>
+
+>
 
 <?php echo $doctor['doctor_name']; ?>
 
@@ -202,7 +242,7 @@ while($doctor = mysqli_fetch_assoc($doctorQuery)){
 <textarea
 name="diagnosis"
 rows="4"
-class="form-control"></textarea>
+class="form-control"><?php echo htmlspecialchars($diagnosis ?? ''); ?></textarea>
 
 </div>
 
